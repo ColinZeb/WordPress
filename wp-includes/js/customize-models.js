@@ -1,4 +1,4 @@
-/* globals _wpCustomizeHeader */
+/* global _wpCustomizeHeader */
 (function( $, wp ) {
 	var api = wp.customize;
 	api.HeaderTool = {};
@@ -26,7 +26,7 @@
 					thumbnail_url: ''
 				},
 				choice: '',
-				hidden: false,
+				selected: false,
 				random: false
 			};
 		},
@@ -113,6 +113,10 @@
 				return false;
 			}
 
+			if (this.get('imageWidth') <= this.get('themeWidth')) {
+				return false;
+			}
+
 			return true;
 		}
 	});
@@ -142,7 +146,7 @@
 			}
 
 			// Overridable by an extending class
-			if (!this.data) {
+			if (typeof this.data === 'undefined') {
 				this.data = _wpCustomizeHeader.uploads;
 			}
 
@@ -160,10 +164,14 @@
 					elt.defaultName = index;
 				}
 
+				if (typeof elt.timestamp === 'undefined') {
+					elt.timestamp = 0;
+				}
+
 				this.add({
 					header: elt,
 					choice: elt.url.split('/').pop(),
-					hidden: current === elt.url.replace(/^https?:\/\//, '')
+					selected: current === elt.url.replace(/^https?:\/\//, '')
 				}, { silent: true });
 			}, this);
 
@@ -191,7 +199,7 @@
 				},
 				choice: randomChoice,
 				random: true,
-				hidden: isRandomSameType
+				selected: isRandomSameType
 			});
 		},
 
@@ -200,33 +208,23 @@
 		},
 
 		shouldHideTitle: function() {
-			return _.every(this.pluck('hidden'));
+			return this.size() < 2;
 		},
 
 		setImage: function(model) {
 			this.each(function(m) {
-				m.set('hidden', false);
+				m.set('selected', false);
 			});
 
 			if (model) {
-				model.set('hidden', true);
-				// Bump images to top except for special "Randomize" images
-				if (!model.get('random')) {
-					model.get('header').timestamp = _.now();
-					this.sort();
-				}
+				model.set('selected', true);
 			}
 		},
 
 		removeImage: function() {
 			this.each(function(m) {
-				m.set('hidden', false);
+				m.set('selected', false);
 			});
-		},
-
-		shown: function() {
-			var filtered = this.where({ hidden: false });
-			return new api.HeaderTool.ChoiceList( filtered );
 		}
 	});
 

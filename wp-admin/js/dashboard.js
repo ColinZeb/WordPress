@@ -64,7 +64,11 @@ jQuery(document).ready( function($) {
 	/* QuickPress */
 	quickPressLoad = function() {
 		var act = $('#quickpost-action'), t;
-		t = $('#quick-press').submit( function() {
+
+		$( '#quick-press .submit input[type="submit"], #quick-press .submit input[type="reset"]' ).prop( 'disabled' , false );
+
+		t = $('#quick-press').submit( function( e ) {
+			e.preventDefault();
 			$('#dashboard_quick_press #publishing-action .spinner').show();
 			$('#quick-press .submit input[type="submit"], #quick-press .submit input[type="reset"]').prop('disabled', true);
 
@@ -84,8 +88,6 @@ jQuery(document).ready( function($) {
 					latestPost.css('background', 'none');
 				}, 1000);
 			}
-
-			return false;
 		} );
 
 		$('#publish').click( function() { act.val( 'post-quickpress-publish' ); } );
@@ -121,9 +123,13 @@ jQuery(document).ready( function($) {
 	};
 	quickPressLoad();
 
-	$( '.meta-box-sortables' ).sortable( 'option', 'containment', 'document' );
+	$( '.meta-box-sortables' ).sortable( 'option', 'containment', '#wpwrap' );
 
 	function autoResizeTextarea() {
+		if ( document.documentMode && document.documentMode < 9 ) {
+			return;
+		}
+
 		// Add a hidden div. We'll copy over the text from the textarea to measure its height.
 		$('body').append( '<div class="quick-draft-textarea-clone" style="display: none;"></div>' );
 
@@ -173,8 +179,8 @@ jQuery(document).ready( function($) {
 				editorHeight = cloneHeight;
 			}
 
-			// No scrollbars as we change height
-			editor.css('overflow-y', 'hidden');
+			// No scrollbars as we change height, not for IE < 9
+			editor.css('overflow', 'hidden');
 
 			$this.css('height', editorHeight + 'px');
 		});

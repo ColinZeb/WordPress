@@ -3,7 +3,6 @@
 	if ( ! wp || ! wp.customize ) { return; }
 	var api = wp.customize;
 
-
 	/**
 	 * wp.customize.HeaderTool.CurrentView
 	 *
@@ -32,15 +31,17 @@
 
 		getHeight: function() {
 			var image = this.$el.find('img'),
-				saved = this.model.get('savedHeight'),
-				height = image.height() || saved,
-				headerImageData;
+				saved, height, headerImageData;
 
 			if (image.length) {
 				this.$el.find('.inner').hide();
 			} else {
 				this.$el.find('.inner').show();
+				return 40;
 			}
+
+			saved = this.model.get('savedHeight');
+			height = image.height() || saved;
 
 			// happens at ready
 			if (!height) {
@@ -62,13 +63,11 @@
 		setPlaceholder: function(_height) {
 			var height = _height || this.getHeight();
 			this.model.set('savedHeight', height);
-			this.$el
-				.add(this.$el.find('.placeholder'))
-				.height(height);
+			this.$el.height(height);
 		},
 
 		setButtons: function() {
-			var elements = $('.actions .remove');
+			var elements = $('#customize-control-header_image .actions .remove');
 			if (this.model.get('choice')) {
 				elements.show();
 			} else {
@@ -92,8 +91,6 @@
 	 * @constructor
 	 * @augments wp.Backbone.View
 	 */
-	(function () { // closures FTW
-	var lastHeight = 0;
 	api.HeaderTool.ChoiceView = wp.Backbone.View.extend({
 		template: wp.template('header-choice'),
 
@@ -110,7 +107,7 @@
 				this.model.get('choice')
 			];
 
-			this.listenTo(this.model, 'change', this.render);
+			this.listenTo(this.model, 'change:selected', this.toggleSelected);
 
 			if (_.contains(properties, api.get().header_image)) {
 				api.HeaderTool.currentHeader.set(this.extendedModel());
@@ -118,26 +115,20 @@
 		},
 
 		render: function() {
-			var model = this.model;
-
 			this.$el.html(this.template(this.extendedModel()));
 
-			if (model.get('random')) {
-				this.setPlaceholder(40);
-			}
-			else {
-				lastHeight = this.getHeight();
-			}
-
-			this.$el.toggleClass('hidden', model.get('hidden'));
+			this.toggleSelected();
 			return this;
+		},
+
+		toggleSelected: function() {
+			this.$el.toggleClass('selected', this.model.get('selected'));
 		},
 
 		extendedModel: function() {
 			var c = this.model.get('collection');
 			return _.extend(this.model.toJSON(), {
-				// -1 to exclude the randomize button
-				nImages: c.size() - 1
+				type: c.type
 			});
 		},
 
@@ -146,8 +137,18 @@
 		setPlaceholder: api.HeaderTool.CurrentView.prototype.setPlaceholder,
 
 		select: function() {
+			this.preventJump();
 			this.model.save();
 			api.HeaderTool.currentHeader.set(this.extendedModel());
+		},
+
+		preventJump: function() {
+			var container = $('.wp-full-overlay-sidebar-content'),
+				scroll = container.scrollTop();
+
+			_.defer(function() {
+				container.scrollTop(scroll);
+			});
 		},
 
 		removeImage: function(e) {
@@ -156,7 +157,6 @@
 			this.remove();
 		}
 	});
-	})();
 
 
 	/**
@@ -175,15 +175,14 @@
 			this.listenTo(this.collection, 'add', this.addOne);
 			this.listenTo(this.collection, 'remove', this.render);
 			this.listenTo(this.collection, 'sort', this.render);
-			this.listenTo(this.collection, 'change:hidden', this.toggleTitle);
-			this.listenTo(this.collection, 'change:hidden', this.setMaxListHeight);
+			this.listenTo(this.collection, 'change', this.toggleList);
 			this.render();
 		},
 
 		render: function() {
 			this.$el.empty();
 			this.collection.each(this.addOne, this);
-			this.toggleTitle();
+			this.toggleList();
 		},
 
 		addOne: function(choice) {
@@ -193,12 +192,13 @@
 			this.$el.append(view.render().el);
 		},
 
-		toggleTitle: function() {
-			var title = this.$el.parents().prev('.customize-control-title');
+		toggleList: function() {
+			var title = this.$el.parents().prev('.customize-control-title'),
+				randomButton = this.$el.find('.random').parent();
 			if (this.collection.shouldHideTitle()) {
-				title.hide();
+				title.add(randomButton).hide();
 			} else {
-				title.show();
+				title.add(randomButton).show();
 			}
 		}
 	});
